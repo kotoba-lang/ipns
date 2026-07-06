@@ -29,13 +29,27 @@ the raw 32-byte public key directly.
 
 ## Scope
 
-- `pubkey->name` — Ed25519 raw public key → CIDv1 libp2p-key IPNS name (`k51…`)
-- `name->pubkey` — inverse decode, with structural validation
-- `base36` / `base36-decode` — the underlying multibase codec, portable
-  `.cljc` (no `BigInteger`, so it runs identically on ClojureScript)
+- `ipns.core` (zero-dep, portable `.cljc`):
+  - `pubkey->name` — Ed25519 raw public key → CIDv1 libp2p-key IPNS name (`k51…`)
+  - `name->pubkey` — inverse decode, with structural validation
+  - `base36` / `base36-decode` — the underlying multibase codec, portable
+    `.cljc` (no `BigInteger`, so it runs identically on ClojureScript)
+  - Verified byte-identical to a real go-ipfs/Kubo node's IPNS name for
+    the same key (`matches-a-real-kubo-node` test — an actual `ipfs
+    init`/`ipfs id`/`ipfs cid format` run, not just cross-checked against
+    this repo's own prior art).
+- `ipns.head` (`:clj`-only — pulls in `ed25519`/`dag-cbor`, `ipns.core`
+  itself stays free of them): `sign`/`verify` a mutable IPNS **head
+  record** (`{:name :value :sequence :valid_until ...}`, the kotoba
+  lexicon `head.json`/`publish.json` shape) over a canonical dag-cbor
+  payload, via `ed25519`'s did:key primitives (ADR-2607061800).
 
-Not in scope: publishing/resolving IPNS records over the network (host-port
-concern, see `kotoba-lang/ipfs`), or any DID method (see `kotoba-lang/did`).
+Not in scope: publishing/resolving IPNS records over the real IPFS/libp2p
+network (host-port concern, see `kotoba-lang/ipfs`; kotobase.net resolves
+`ipns.head` records through its own XRPC registry instead, ADR-2607061800),
+any DID method (see `kotoba-lang/did`), or a `:cljs` port of `ipns.head`'s
+signing (tracked follow-up — `kotobase-client` already has a `@noble/curves`
+precedent in its own `cacao.cljc` to port from).
 
 ## Provenance
 

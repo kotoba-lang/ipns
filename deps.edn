@@ -1,5 +1,15 @@
 {:paths ["src"]
- :deps {}
+ ;; ipns.core (name derivation) stays zero-dep and portable -- these two
+ ;; are pulled in ONLY by ipns.head (:clj-only signed head records), same
+ ;; git-sha-pin convention kotoba-lang/cacao's deps.edn documents
+ ;; (ADR-2607022400). SHAs are each sibling repo's origin/main HEAD as of
+ ;; 2026-07-06.
+ :deps {io.github.kotoba-lang/ed25519
+        {:git/url "https://github.com/kotoba-lang/ed25519.git"
+         :git/sha "fdcefb9f1b83461fee54d04b63e374fa301ee847"}
+        io.github.kotoba-lang/dag-cbor
+        {:git/url "https://github.com/kotoba-lang/dag-cbor.git"
+         :git/sha "9c60d5832b771f869b237f5ba20f0b6de57cde84"}}
  :aliases
  {:test {:extra-paths ["test"]
          :extra-deps {io.github.cognitect-labs/test-runner
