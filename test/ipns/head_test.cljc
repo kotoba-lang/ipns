@@ -20,4 +20,13 @@
          (let [other-seed (byte-array (range 1 33))]
            (is (= false (:valid? (head/verify
                                    (assoc signed :public_key_multibase
-                                          (ed/did-key-from-seed other-seed)))))))))))
+                                          (ed/did-key-from-seed other-seed))))))))
+       (testing "a syntactically malformed signature_multibase (bad base58)
+                 fails closed as :valid? false rather than throwing"
+         (is (= false (:valid? (head/verify
+                                 (assoc signed :signature_multibase "z0000invalidchars"))))))
+       (testing "a syntactically malformed public_key_multibase (truncated
+                 did:key) fails closed as :valid? false rather than throwing"
+         (is (= false (:valid? (head/verify
+                                 (assoc signed :public_key_multibase
+                                        "did:key:z6MkInvalidGarbageThatIsTooShort1")))))))))

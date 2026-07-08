@@ -42,6 +42,11 @@
       dag-cbor payload over every field except the two signature fields
       themselves, and checks `:signature_multibase` against the `did:key`
       in `:public_key_multibase` (via `ed25519.core/verify-did`).
+      A syntactically malformed `:signature_multibase`/`:public_key_multibase`
+      (bad base58, truncated did:key, etc. -- exactly what a bit-flip,
+      truncation, or tampering attempt produces) fails closed as
+      `:valid? false` rather than throwing, so callers can always trust
+      `:valid?` without a surrounding try/catch of their own.
       Sequence-rollback (CAS) is NOT this function's job -- that is the
       storage layer's optimistic-concurrency write
       (`kotobase-cljc-worker`'s `r2-put-head-if-match`)."
@@ -49,8 +54,10 @@
      (let [{:keys [public_key_multibase signature_multibase]} record
            payload (cbor/encode (dissoc record :public_key_multibase :signature_multibase))]
        {:valid? (boolean
-                 (and public_key_multibase signature_multibase
-                      (ed/verify-did public_key_multibase
-                                     payload
-                                     (ed/b58-decode (subs signature_multibase 1)))))
+                 (try
+                   (and public_key_multibase signature_multibase
+                        (ed/verify-did public_key_multibase
+                                       payload
+                                       (ed/b58-decode (subs signature_multibase 1))))
+                   (catch Exception _ false)))
         :name (:name record)})))
