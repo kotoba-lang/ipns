@@ -94,7 +94,7 @@
         (throw (ex-info "expected identity multihash (0x00)" {:name name})))
       (let [len (second mh)
             pb  (vec (take len (drop 2 mh)))]
-        (when-not (and (= len (count pb)) (>= len 36)
+        (when-not (and (= len (count pb)) (= len 36)
                        (= 0x08 (nth pb 0)) (= 0x01 (nth pb 1))
                        (= 0x12 (nth pb 2)) (= 0x20 (nth pb 3)))
           (throw (ex-info "expected libp2p Ed25519 PublicKey protobuf" {:name name})))
