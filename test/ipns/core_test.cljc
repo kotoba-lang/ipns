@@ -1,5 +1,5 @@
 (ns ipns.core-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [ipns.core :as ipns]))
 
 ;; Regression vectors cross-checked byte-for-byte against the prior
@@ -44,3 +44,32 @@
                (ipns/name->pubkey "not-a-k-name")))
   (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs js/Error)
                (ipns/name->pubkey (str "k" (ipns/base36 [0x01 0x00]))))))
+
+(defn- pubkey-name-with-protobuf
+  "Build a 'k...' IPNS name wrapping an arbitrary (possibly malformed)
+  libp2p PublicKey protobuf payload `pb`, bypassing pubkey->name's own
+  32-byte validation -- for exercising name->pubkey's decode-side checks."
+  [pb]
+  (let [mh  (vec (concat [0x00 (count pb)] pb))
+        cid (vec (concat [0x01 0x72] mh))]
+    (str "k" (ipns/base36 cid))))
+
+(deftest rejects-oversized-protobuf-payload
+  ;; name->pubkey must only accept an EXACT 36-byte libp2p PublicKey
+  ;; protobuf (4-byte header + 32-byte key). A forged name whose declared
+  ;; protobuf length is 36 or more, with a valid header, must still be
+  ;; rejected -- not silently accepted with trailing garbage bytes folded
+  ;; into the returned "public key." This is used as a validation
+  ;; boundary (org-ietf-dns's ipns-label?), so a length check that only
+  ;; enforces a floor (>= 36) rather than an exact match is a real gap.
+  (let [good-key (vec (range 32))
+        oversized-pb (vec (concat [0x08 0x01 0x12 0x20] good-key [0xaa 0xbb 0xcc 0xdd]))
+        forged (pubkey-name-with-protobuf oversized-pb)]
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs js/Error)
+                 (ipns/name->pubkey forged))))
+  (testing "one byte over the exact 36-byte length is still rejected"
+    (let [good-key (vec (range 32))
+          one-over-pb (vec (concat [0x08 0x01 0x12 0x20] good-key [0xff]))
+          forged (pubkey-name-with-protobuf one-over-pb)]
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs js/Error)
+                   (ipns/name->pubkey forged))))))
